@@ -33,38 +33,41 @@ class EzMultiStore extends Module
     {
         if (!parent::install()
             || !$this->_newCarrier()
-            || !$this->_installTab('AdminParentOrders','AdminPickupOrders', $this->l('Pickup Orders'))
+            || !$this->_installTab('AdminParentOrders', 'AdminPickupOrders', $this->l('Pickup Orders'))
         ) {
             return false;
         }
         return true;
     }
 
-    public function uninstall() {
+    public function uninstall()
+    {
         if (!parent::uninstall()
             || !$this->_uninstallTab('AdminPickupOrders')
 
-        ){
+        ) {
             return false;
         }
         return true;
     }
 
-    private function _installTab($parent, $class_name, $name) {
+    private function _installTab($parent, $class_name, $name)
+    {
         $tab = new Tab();
         $tab->id_parent = (int)Tab::getIdFromClassName($parent);
         $tab->class_name = $class_name;
         $tab->module = $this->name;
 
         $tab->name = [];
-        foreach(Language::getLanguages(true) as $lang) {
+        foreach (Language::getLanguages(true) as $lang) {
             $tab->name[$lang['id_lang']] = $name;
         }
         return $tab->save();
     }
 
 
-    private function _uninstallTab($class_name) {
+    private function _uninstallTab($class_name)
+    {
         $id_tab = Tab::getIdFromClassName($class_name);
         $tab = new Tab((int)$id_tab);
 
@@ -75,7 +78,7 @@ class EzMultiStore extends Module
     private function _newCarrier()
     {
 
-        if (Configuration::get('EZ_MULTISTORE_CARRIER_INSTALLED') !== 1) {
+        if (Configuration::get('EZMULTISTORE_CARRIER_INSTALLED') == null) {
 
             $id_lang = (int)$this->context->language->id;
 
@@ -83,8 +86,14 @@ class EzMultiStore extends Module
             $carrier->name = $this->l('Pick up in store');
             $carrier->delay[$id_lang] = $this->l('Order ready in 2 hours.');
             $carrier->is_free = true;
+            $carrier->is_module = false;
+            $carrier->shipping_external = true;
+            $carrier->external_module_name = $this->name;
+            $carrier->need_range = true;
+
 
             if ($carrier->add()) {
+
                 // Ajout des groupes d'utilisateur
                 $groups = Group::getgroups(true);
                 foreach ($groups as $group) {
@@ -97,9 +106,16 @@ class EzMultiStore extends Module
                 foreach ($zones as $zone) {
                     $carrier->addZone($zone['id_zone']);
                 }
+
             }
 
-            Configuration::updateValue('EZ_MULTISTORE_CARRIER_INSTALLED', 1);
+
+            if (!@copy(dirname(__FILE__) . '/views/img/ezmultistore.jpg',
+                _PS_SHIP_IMG_DIR_ . '/' . (int)$carrier->id . '.jpg')) {
+            }
+
+
+            Configuration::updateValue('EZMULTISTORE_CARRIER_INSTALLED', 1);
 
         }
 
