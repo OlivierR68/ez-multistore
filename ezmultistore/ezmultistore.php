@@ -9,7 +9,7 @@ class EzMultiStore extends Module
     public function __construct()
     {
         $this->name = 'ezmultistore';
-        $this->tab = 'front_office_features';
+        $this->tab = 'shipping_logistics';
         $this->version = '1.0.0';
         $this->author = 'webolive Studio';
         $this->need_instance = 0;
