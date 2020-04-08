@@ -22,18 +22,19 @@ class EzMultiStore extends Module
         parent::__construct();
 
         $this->displayName = $this->l('EZ MultiStore : Store management');
-        $this->description = $this->l('This module enables the option of having different invoice numbers and prefixs by each multi store. In some countries this feature is totally necessary because the invoice numbers must be consecutive, never shared between different stores');
+        $this->description = $this->l('This module enables the option of having different invoices for each stores.');
 
-        $this->confirmUninstall = $this->l('Are you sure you want to uninstall?');
+        $this->confirmUninstall = $this->l('Are you sure you want to uninstall ?');
 
 
     }
 
-    public function install() {
+    public function install()
+    {
 
         if (!parent::install()
             || !$this->_newCarrier()
-        ){
+        ) {
             return false;
         }
         return true;
@@ -48,32 +49,33 @@ class EzMultiStore extends Module
     {
         $id_lang = $id_lang = $this->context->language->id;
 
-        // Tableau pour tester, à remplacer par une table bdd
-        $stores = [
-            'Colmar' => [
-                'name' => 'Colmar : pick up in store',
-                'delay' => '2 hours',
-          ],
-            'Mulhouse' => [
-                'name' => 'Mulhouse : pick up in store',
-                'delay' => '2 hours',
-            ],
-            'Strasbourg' => [
-                'name' => 'Strasbourg : pick up in store',
-                'delay' => '2 hours',
-            ]
-        ];
+        $carrier = new Carrier();
 
-        foreach ($stores as $store) {
-            $carrier = new Carrier();
+        $carrier->name = $this->l('Pick up in store');
+        $carrier->delay[$id_lang] = $this->l('2 Hours');
+        $carrier->is_free = true;
 
-            $carrier->name = $store['name'];
-            $carrier->delay[$id_lang] = $store['delay'];
-            $carrier->is_free = true;
-
-            $carrier->save();
-        }
+        $carrier->save();
 
         return true;
+    }
+
+    public function getContent()
+    {
+
+        // Chargement fichiers JS et CSS nécessaires
+        $js = [
+            $this->_path . 'views/js/ezmultistore.js'
+        ];
+
+        $css = [
+            $this->_path . 'views/css/firstmodule.css'
+        ];
+
+        $this->context->controller->addJS($js);
+        $this->context->controller->addCSS($css);
+
+
+        
     }
 }
