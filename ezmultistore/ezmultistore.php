@@ -74,16 +74,31 @@ class EzMultiStore extends Module
 
     private function _newCarrier()
     {
-        $id_lang = $id_lang = $this->context->language->id;
 
         if (Configuration::get('EZ_MULTISTORE_CARRIER_INSTALLED') !== 1) {
 
+            $id_lang = (int)$this->context->language->id;
+
             $carrier = new Carrier();
             $carrier->name = $this->l('Pick up in store');
-            $carrier->delay[$id_lang] = $this->l('2 Hours');
+            $carrier->delay[$id_lang] = $this->l('Order ready in 2 hours.');
             $carrier->is_free = true;
 
-            $carrier->save();
+            if ($carrier->add()) {
+                // Ajout des groupes d'utilisateur
+                $groups = Group::getgroups(true);
+                foreach ($groups as $group) {
+                    Db::getInstance()->Execute('INSERT INTO ' . _DB_PREFIX_ . 'carrier_group
+                    VALUE (\'' . (int)($carrier->id) . '\',\'' . (int)($group['id_group']) . '\')');
+                }
+
+                // Ajout des zones
+                $zones = Zone::getZones();
+                foreach ($zones as $zone) {
+                    $carrier->addZone($zone['id_zone']);
+                }
+            }
+
             Configuration::updateValue('EZ_MULTISTORE_CARRIER_INSTALLED', 1);
 
         }
@@ -97,11 +112,11 @@ class EzMultiStore extends Module
 
         // Chargement fichiers JS et CSS nécessaires
         $js = [
-            $this->_path . 'views/js/ezmultistore.js'
+            $this->_path . 'views/js/ezmultistore.js',
         ];
 
         $css = [
-            $this->_path . 'views/css/firstmodule.css'
+            $this->_path . 'views/css/firstmodule.css',
         ];
 
         $this->context->controller->addJS($js);
