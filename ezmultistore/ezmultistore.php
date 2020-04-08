@@ -31,34 +31,66 @@ class EzMultiStore extends Module
 
     public function install()
     {
-
         if (!parent::install()
             || !$this->_newCarrier()
+            || !$this->_installTab('AdminParentOrders','AdminPickupOrders', $this->l('Pickup Orders'))
         ) {
             return false;
         }
         return true;
     }
 
-    public function uninstall()
-    {
-        return parent::uninstall();
+    public function uninstall() {
+        if (!parent::uninstall()
+            || !$this->_uninstallTab('AdminPickupOrders')
+
+        ){
+            return false;
+        }
+        return true;
+    }
+
+    private function _installTab($parent, $class_name, $name) {
+        $tab = new Tab();
+        $tab->id_parent = (int)Tab::getIdFromClassName($parent);
+        $tab->class_name = $class_name;
+        $tab->module = $this->name;
+
+        $tab->name = [];
+        foreach(Language::getLanguages(true) as $lang) {
+            $tab->name[$lang['id_lang']] = $name;
+        }
+        return $tab->save();
+    }
+
+
+    private function _uninstallTab($class_name) {
+        $id_tab = Tab::getIdFromClassName($class_name);
+        $tab = new Tab((int)$id_tab);
+
+        return $tab->delete();
+
     }
 
     private function _newCarrier()
     {
         $id_lang = $id_lang = $this->context->language->id;
 
-        $carrier = new Carrier();
+        if (Configuration::get('EZ_MULTISTORE_CARRIER_INSTALLED') !== 1) {
 
-        $carrier->name = $this->l('Pick up in store');
-        $carrier->delay[$id_lang] = $this->l('2 Hours');
-        $carrier->is_free = true;
+            $carrier = new Carrier();
+            $carrier->name = $this->l('Pick up in store');
+            $carrier->delay[$id_lang] = $this->l('2 Hours');
+            $carrier->is_free = true;
 
-        $carrier->save();
+            $carrier->save();
+            Configuration::updateValue('EZ_MULTISTORE_CARRIER_INSTALLED', 1);
+
+        }
 
         return true;
     }
+
 
     public function getContent()
     {
@@ -75,7 +107,5 @@ class EzMultiStore extends Module
         $this->context->controller->addJS($js);
         $this->context->controller->addCSS($css);
 
-
-        
     }
 }
