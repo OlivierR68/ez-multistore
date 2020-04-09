@@ -80,13 +80,12 @@ class EzMultiStore extends Module
 
     public function hookDisplayCarrierExtraContent($params) {
 
-        return$this->display(__FILE__, 'displayCarrierExtraContent.tpl');
+        return $this->display(__FILE__, 'displayAfterCarrier.tpl');
     }
-
 
     public function hookDisplayAfterCarrier($params) {
 
-        return$this->display(__FILE__, 'displayAfterCarrier.tpl');
+        return $this->display(__FILE__, 'displayAfterCarrier.tpl');
     }
 
 
@@ -119,21 +118,21 @@ class EzMultiStore extends Module
             $carrier->delay[$id_lang] = $this->l('Order ready in 2 hours.');
             $carrier->is_free = true;
 
+            /*
             $carrier->is_module = false;
             $carrier->shipping_external = true;
             $carrier->external_module_name = $this->name;
-            $carrier->need_range = true;
-
-
+            */
 
             if ($carrier->add()) {
 
                 // Ajout des groupes d'utilisateur
-                $groups = Group::getgroups(true);
+                $groups_list = [];
+                $groups = Group::getGroups($id_lang);
                 foreach ($groups as $group) {
-                    Db::getInstance()->Execute('INSERT INTO ' . _DB_PREFIX_ . 'carrier_group
-                    VALUE (\'' . (int)($carrier->id) . '\',\'' . (int)($group['id_group']) . '\')');
+                    $groups_list[] = $group['id_group'];
                 }
+                $carrier->setGroups($groups_list);
 
                 // Ajout des zones
                 $zones = Zone::getZones();
