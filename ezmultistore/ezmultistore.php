@@ -34,6 +34,8 @@ class EzMultiStore extends Module
         if (!parent::install()
             || !$this->_newCarrier()
             || !$this->_installTab('AdminParentOrders', 'AdminPickupOrders', $this->l('Pickup Orders'))
+            || !$this->registerHook('displayCarrierExtraContent')
+            || !$this->registerHook('displayAfterCarrier')
         ) {
             return false;
         }
@@ -75,6 +77,36 @@ class EzMultiStore extends Module
 
     }
 
+
+    public function hookDisplayCarrierExtraContent($params) {
+
+        return$this->display(__FILE__, 'displayCarrierExtraContent.tpl');
+    }
+
+
+    public function hookDisplayAfterCarrier($params) {
+
+        return$this->display(__FILE__, 'displayAfterCarrier.tpl');
+    }
+
+
+    // Création d'une fonction qui créé des tables non active pour l'instant
+    private function _installSql() {
+
+        // On récupère notre install.php
+        include(dirname(__FILE__).'/sql/install.php');
+
+        // On créé une variable $result à true
+        $result = true;
+        foreach($sql_requests as $request) {
+            if (!empty($request)) {
+                $result &= Db::getInstance()->execute($request);
+            }
+        }
+        return true;
+
+    }
+
     private function _newCarrier()
     {
 
@@ -86,10 +118,12 @@ class EzMultiStore extends Module
             $carrier->name = $this->l('Pick up in store');
             $carrier->delay[$id_lang] = $this->l('Order ready in 2 hours.');
             $carrier->is_free = true;
+
             $carrier->is_module = false;
             $carrier->shipping_external = true;
             $carrier->external_module_name = $this->name;
             $carrier->need_range = true;
+
 
 
             if ($carrier->add()) {
@@ -112,6 +146,7 @@ class EzMultiStore extends Module
 
             if (!@copy(dirname(__FILE__) . '/views/img/ezmultistore.jpg',
                 _PS_SHIP_IMG_DIR_ . '/' . (int)$carrier->id . '.jpg')) {
+                return false;
             }
 
 
