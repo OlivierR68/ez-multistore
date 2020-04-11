@@ -33,20 +33,20 @@ class EzMultiStore extends Module
     {
         if (!parent::install()
             || !$this->_newCarrier()
-            || !$this->_installTab('AdminParentOrders', 'AdminPickupOrders', $this->l('Pickup Orders'))
+            || !$this->_installTab('AdminParentOrders', 'AdminPickupOrdersController', $this->l('Pickup Orders'))
             || !$this->registerHook('displayAfterCarrier')
             || !$this->registerHook('displayHeader')
+            || !$this->registerHook('displayOrderConfirmation')
             || !$this->_installSql()
-        ) {
-            return false;
-        }
+        ) return false;
+
         return true;
     }
 
     public function uninstall()
     {
         if (!parent::uninstall()
-            || !$this->_uninstallTab('AdminPickupOrders')
+            || !$this->_uninstallTab('AdminPickupOrdersController')
 
         ) {
             return false;
@@ -88,58 +88,6 @@ class EzMultiStore extends Module
             }
         }
         return true;
-    }
-
-    public function hookDisplayHeader($params)
-    {
-
-        $js = [
-            $this->_path . 'views/js/front.checkout.js',
-        ];
-
-        $css = [
-            $this->_path . 'views/css/ezmultistore.css',
-        ];
-
-        $this->context->controller->addJS($js);
-        $this->context->controller->addCSS($css);
-
-        Media::addJsDef([
-            'carrierId' => Configuration::get('EZMULTISTORE_CARRIER_ID'),
-            'moduleCheckOutUrl'   => $this->context->link->getModuleLink('ezmultistore','checkout'),
-            'baseUrl'   => $this->context->link->getBaseLink(),
-            'userId'    => $this->context->customer->id
-        ]);
-
-    }
-
-    public function hookDisplayAfterCarrier($params)
-    {
-
-        $carrier = new Carrier(Configuration::get('EZMULTISTORE_CARRIER_ID'));
-        $id_lang = (int)$this->context->language->id;
-
-        if ($carrier->active) {
-
-            $stores = Store::getStores($id_lang);
-            $imageRetriever = new \PrestaShop\PrestaShop\Adapter\Image\ImageRetriever($this->context->link);
-
-            foreach ($stores as &$store) {
-                unset($store['active']);
-                $store['image'] = $imageRetriever->getImage(new Store($store['id_store']), $store['id_store']);
-                if (is_array($store['image'])) {
-                    $store['image']['legend'] = $store['image']['legend'][$this->context->language->id];
-                }
-            }
-
-            $this->context->smarty->assign([
-                'stores'        => $stores,
-                'ez_title'      => $this->l('Select your store'),
-            ]);
-
-            return $this->display(__FILE__, 'displayAfterCarrier.tpl');
-
-        }
     }
 
     private function _newCarrier()
@@ -187,6 +135,104 @@ class EzMultiStore extends Module
         }
 
         return true;
+    }
+
+
+    private function _newPickupAddress($store, $customer)
+    {
+        $address = new Address();
+
+        $address->alias = $this->l('PickUp : ').$store['name'];
+        $address->id_customer = $customer->id;
+        $address->lastname = $customer->lastname;
+        $address->firstname = $customer->firstname;
+
+        $attr_list = ['id_country', 'address1', 'address2', 'postcode', 'city', 'phone'];
+        foreach ($attr_list as $attr) $address->$attr = $store[$attr];
+
+        $address->add();
+
+        return $address;
+    }
+
+    public function hookDisplayHeader($params)
+    {
+        // foreach (Store::getStores(true) as $store) $this->_StoreToAddress($store);
+
+        $js = [
+            $this->_path . 'views/js/front.checkout.js',
+        ];
+
+        $css = [
+            $this->_path . 'views/css/ezmultistore.css',
+        ];
+
+        $this->context->controller->addJS($js);
+        $this->context->controller->addCSS($css);
+
+        Media::addJsDef([
+            'carrierId'         => Configuration::get('EZMULTISTORE_CARRIER_ID'),
+            'moduleCheckOutUrl' => $this->context->link->getModuleLink('ezmultistore','checkout'),
+            'baseUrl'           => $this->context->link->getBaseLink(),
+            'userId'            => $this->context->customer->id
+        ]);
+
+    }
+
+    public function hookDisplayAfterCarrier($params)
+    {
+
+        $carrier = new Carrier(Configuration::get('EZMULTISTORE_CARRIER_ID'));
+        $id_lang = (int)$this->context->language->id;
+
+        if ($carrier->active) {
+
+            $stores = Store::getStores($id_lang);
+            $imageRetriever = new \PrestaShop\PrestaShop\Adapter\Image\ImageRetriever($this->context->link);
+
+            foreach ($stores as $index => &$store) {
+                if($store['active'] == false) {
+                    unset($stores[$index]);
+                } else {
+                    $store['image'] = $imageRetriever->getImage(new Store($store['id_store']), $store['id_store']);
+                    if (is_array($store['image'])) {
+                        $store['image']['legend'] = $store['image']['legend'][$this->context->language->id];
+                    }
+                }
+            }
+
+            $this->context->smarty->assign([
+                'stores'        => $stores,
+                'ez_title'      => $this->l('Select your store'),
+            ]);
+
+            return $this->display(__FILE__, 'displayAfterCarrier.tpl');
+
+        }
+    }
+
+    public function hookDisplayOrderConfirmation($params)
+    {
+        $order = $params['order'];
+
+        if ($order->id_carrier == Configuration::get('EZMULTISTORE_CARRIER_ID')) {
+
+            $sql = 'SELECT `store_id` FROM '._DB_PREFIX_.'ezmultistore_checkout WHERE `customer_id` = '.$order->id_customer;
+            $store = Db::getInstance()->getValue($sql);
+
+            $pickupAddress = $this->_newPickupAddress($store, new Customer($order->id_customer));
+            $order->id_address_delivery($pickupAddress->id);
+            $order->save();
+
+
+            Db::getInstance()->insert('ezmultistore_order', [
+                'order_id'    => $order->id,
+                'store_id'    => $store,
+                'customer_id' => $order->id_customer,
+                'address_id'  => $pickupAddress->id,
+            ]);
+
+        }
     }
 
 

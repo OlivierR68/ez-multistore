@@ -4,14 +4,15 @@
  * Class EzmultistoreCheckoutModuleFrontController
  *
  * Ajax processes:
- *  - test
+ *  - getUserStore
+ *  - setUserStore
  */
 
 class EzmultistoreCheckoutModuleFrontController extends ModuleFrontController
 {
     public function initContent() {
         parent::initContent();
-      $this->setTemplate('module:ezmultistore/views/templates/front/checkout.tpl');
+        $this->setTemplate('module:ezmultistore/views/templates/front/checkout.tpl');
     }
 
     public function displayAjaxGetUserStore()

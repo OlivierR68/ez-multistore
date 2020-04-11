@@ -1,6 +1,5 @@
 $(document).ready(function () {
 
-    const p = (x) => console.log(x);
     let storeId = null;
 
     $.ajax({
