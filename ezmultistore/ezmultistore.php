@@ -141,14 +141,19 @@ class EzMultiStore extends Module
     private function _newPickupAddress($store, $customer)
     {
         $address = new Address();
+        $id_lang = $this->context->language->id;
+        $store->address1;
 
-        $address->alias = $this->l('PickUp : ').$store['name'];
+        $address->alias = $this->l('PickUp : ').$store->name[$id_lang];
         $address->id_customer = $customer->id;
         $address->lastname = $customer->lastname;
         $address->firstname = $customer->firstname;
 
-        $attr_list = ['id_country', 'address1', 'address2', 'postcode', 'city', 'phone'];
-        foreach ($attr_list as $attr) $address->$attr = $store[$attr];
+        $address->address1 = $store->address1[$id_lang];
+        $address->address2 = $store->address2[$id_lang];
+
+        $attr_list = ['id_country', 'postcode', 'city', 'phone'];
+        foreach ($attr_list as $attr) $address->$attr = $store->$attr;
 
         $address->add();
 
@@ -218,16 +223,17 @@ class EzMultiStore extends Module
         if ($order->id_carrier == Configuration::get('EZMULTISTORE_CARRIER_ID')) {
 
             $sql = 'SELECT `store_id` FROM '._DB_PREFIX_.'ezmultistore_checkout WHERE `customer_id` = '.$order->id_customer;
-            $store = Db::getInstance()->getValue($sql);
+            $store_id = Db::getInstance()->getValue($sql);
+            $store = new Store($store_id);
 
             $pickupAddress = $this->_newPickupAddress($store, new Customer($order->id_customer));
-            $order->id_address_delivery($pickupAddress->id);
+            $order->id_address_delivery = $pickupAddress->id;
             $order->save();
 
 
             Db::getInstance()->insert('ezmultistore_order', [
                 'order_id'    => $order->id,
-                'store_id'    => $store,
+                'store_id'    => $store->id,
                 'customer_id' => $order->id_customer,
                 'address_id'  => $pickupAddress->id,
             ]);
