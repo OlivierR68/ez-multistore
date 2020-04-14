@@ -105,6 +105,12 @@ class EzMultiStore extends Module
         return true;
     }
 
+    /**
+     * Méthode pour ajout d'un transporteur
+     * @return bool
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
+     */
     private function _newCarrier()
     {
         $id_lang = (int)$this->context->language->id;
@@ -146,6 +152,10 @@ class EzMultiStore extends Module
         return true;
     }
 
+    /**
+     * Méthode pour suppression d'un transporteur
+     * @return bool
+     */
     private function _deleteCarrier()
     {
         $carrier = new Carrier(Configuration::get('EZMULTISTORE_CARRIER_ID'));
@@ -155,6 +165,12 @@ class EzMultiStore extends Module
     }
 
 
+    /**
+     * Méthode pour ajouter une nouvelle addresse
+     * @param $store
+     * @param $customer
+     * @return Address
+     */
     private function _newPickupAddress($store, $customer)
     {
         $address = new Address();
@@ -176,6 +192,11 @@ class EzMultiStore extends Module
         return $address;
     }
 
+
+    /**
+     * Hook pour le header des pages front-end
+     * @param $params
+     */
     public function hookDisplayHeader($params)
     {
 
@@ -200,6 +221,12 @@ class EzMultiStore extends Module
     }
 
 
+    /**
+     * Hook pour ajouts des magasins dans le checkout des commandes
+     * @param $params
+     * @return string
+     * @throws PrestaShopDatabaseException
+     */
     public function hookDisplayAfterCarrier($params)
     {
 
@@ -232,6 +259,12 @@ class EzMultiStore extends Module
         }
     }
 
+
+    /**
+     * Hook pour la création d'adresse et l'ajout de commande spécifique
+     * @param $params
+     * @throws PrestaShopDatabaseException
+     */
     public function hookDisplayOrderConfirmation($params)
     {
         $order = $params['order'];
@@ -261,8 +294,10 @@ class EzMultiStore extends Module
     {
         $order = new Order($params['id_order']);
 
-        $sql = 'SELECT `store_id` FROM ' . _DB_PREFIX_ . 'ezmultistore_order WHERE `order_id` = ' . $order->id;
+        $sql = new DbQuery();
+        $sql->select('store_id')->from('ezmultistore_order')->where('order_id = '.$order->id);
         $store_id = Db::getInstance()->getValue($sql);
+
         $store = new Store($store_id);
 
         $imageRetriever = new \PrestaShop\PrestaShop\Adapter\Image\ImageRetriever($this->context->link);
