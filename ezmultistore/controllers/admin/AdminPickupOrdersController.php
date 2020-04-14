@@ -18,4 +18,16 @@ class AdminPickupOrdersController extends ModuleAdminController
         parent::__construct();
 
     }
+
+    public function initToolbar()
+    {
+        if ($this->display == 'view') {
+            $id_order = Tools::getValue('id_order');
+            $order = new Order($id_order);
+            if (Validate::isLoadedObject($order)) {
+                Tools::redirectAdmin($this->context->link->getAdminLink('AdminOrders').'&vieworder&id_order='.(int)$id_order);
+            }
+        }
+        return parent::initToolbar();
+    }
 }

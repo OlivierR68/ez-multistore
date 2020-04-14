@@ -31,11 +31,8 @@
                     <dt>Phone contact</dt>
                     <dd><a href="tel:{$store->phone}"><i class="icon-phone"></i> {$store->phone}</a></dd>
 
-                    <dt>{l s='VAT Number' mod='ezmultistore'}</dt>
-                    <dd>123456789</dd>
-
-                    <dt>{l s='SIRET Number' mod='ezmultistore'}</dt>
-                    <dd>123456789</dd>
+                    <dt>{l s='Additionnal informations' mod='ezmultistore'}</dt>
+                    <dd>{$store_info}</dd>
                 </dl>
             </div>
             <div class="col-xs-4">
