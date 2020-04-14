@@ -93,6 +93,18 @@ class EzMultiStore extends Module
         return true;
     }
 
+    private function _uninstallSql()
+    {
+        include(dirname(__FILE__) . '/sql/uninstall.php.php');
+        $result = true;
+        foreach ($sql_requests as $request) {
+            if (!empty($request)) {
+                $result &= Db::getInstance()->execute($request);
+            }
+        }
+        return true;
+    }
+
     /**
      * Méthode pour ajout d'un transporteur
      * @return bool
@@ -367,5 +379,6 @@ class EzMultiStore extends Module
 
         return $result;
     }
+
 
 }
