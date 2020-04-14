@@ -12,6 +12,7 @@ class EzmultistoreCheckoutModuleFrontController extends ModuleFrontController
 {
     public function initContent() {
         parent::initContent();
+
         $this->setTemplate('module:ezmultistore/views/templates/front/checkout.tpl');
     }
 
