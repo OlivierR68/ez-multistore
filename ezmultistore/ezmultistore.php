@@ -50,7 +50,7 @@ class EzMultiStore extends Module
             || !$this->_uninstallTab('AdminPickupOrders')
             || !$this->_deleteCarrier()
             || !Configuration::deleteByName('EZMULTISTORE_CARRIER_ID')
-            || !$this->_uninstallSql()
+            || !$this->_installSql(true)
         ) {
             return false;
         }
@@ -81,9 +81,13 @@ class EzMultiStore extends Module
 
     }
 
-    private function _installSql()
+    private function _installSql($uninstall = false)
     {
-        include(dirname(__FILE__) . '/sql/install.php');
+        $file = 'install.php';
+        if ($uninstall) $file = 'uninstall.php';
+
+        include(dirname(__FILE__) . '/sql/' . $file);
+
         $result = true;
         foreach ($sql_requests as $request) {
             if (!empty($request)) {
@@ -93,17 +97,6 @@ class EzMultiStore extends Module
         return true;
     }
 
-    private function _uninstallSql()
-    {
-        include(dirname(__FILE__) . '/sql/uninstall.php.php');
-        $result = true;
-        foreach ($sql_requests as $request) {
-            if (!empty($request)) {
-                $result &= Db::getInstance()->execute($request);
-            }
-        }
-        return true;
-    }
 
     /**
      * Méthode pour ajout d'un transporteur
@@ -239,13 +232,9 @@ class EzMultiStore extends Module
             $imageRetriever = new \PrestaShop\PrestaShop\Adapter\Image\ImageRetriever($this->context->link);
 
             foreach ($stores as $index => &$store) {
-                if ($store['active'] == false) {
-                    unset($stores[$index]);
-                } else {
-                    $store['image'] = $imageRetriever->getImage(new Store($store['id_store']), $store['id_store']);
-                    if (is_array($store['image'])) {
-                        $store['image']['legend'] = $store['image']['legend'][$this->context->language->id];
-                    }
+                $store['image'] = $imageRetriever->getImage(new Store($store['id_store']), $store['id_store']);
+                if (is_array($store['image'])) {
+                    $store['image']['legend'] = $store['image']['legend'][$this->context->language->id];
                 }
             }
 
@@ -272,7 +261,7 @@ class EzMultiStore extends Module
         if ($order->id_carrier == Configuration::get('EZMULTISTORE_CARRIER_ID')) {
 
             $sql = new DbQuery();
-            $sql->select('store_id')->from('ezmultistore_checkout')->where('customer_id = '.$order->id_customer);
+            $sql->select('store_id')->from('ezmultistore_checkout')->where('customer_id = ' . $order->id_customer);
             $store_id = Db::getInstance()->getValue($sql);
             $store = new Store($store_id);
 
@@ -293,17 +282,21 @@ class EzMultiStore extends Module
 
     public function hookDisplayAdminOrder($params)
     {
+        $id_lang = $this->context->language->id;
+
         $order = new Order($params['id_order']);
 
         $sql = new DbQuery();
-        $sql->select('store_id')->from('ezmultistore_order')->where('order_id = '.$order->id);
+        $sql->select('store_id')->from('ezmultistore_order')->where('order_id = ' . $order->id);
         $store_id = Db::getInstance()->getValue($sql);
 
         $store = new Store($store_id);
         $imageRetriever = new \PrestaShop\PrestaShop\Adapter\Image\ImageRetriever($this->context->link);
         $store_image = $imageRetriever->getImage(new Store($store_id), $store_id);
+        $store->hours[$id_lang] = json_decode($store->hours[$id_lang]);
 
-        $sql->select('information')->from('ezmultistore_store_info')->where('store_id = '.$store_id);
+        $sql = new DbQuery();
+        $sql->select('information')->from('ezmultistore_store_info')->where('store_id = ' . $store->id);
         $store_info = Db::getInstance()->getValue($sql);
 
 
@@ -311,10 +304,10 @@ class EzMultiStore extends Module
             'panel_title' => $this->name . ' V' . $this->version,
             'store_image' => $store_image,
             'store' => $store,
-            'store_info' => $store_info,
+            'store_info' => Tools::htmlentitiesDecodeUTF8($store_info),
             'state' => new State($store->id_state),
             'country' => new Country($store->id_country),
-            'id_lang' => $this->context->language->id,
+            'id_lang' => $id_lang,
         ]);
         return $this->display(__FILE__, 'displayAdminOrder2.tpl');
     }
@@ -322,15 +315,24 @@ class EzMultiStore extends Module
 
     public function getContent()
     {
-        $id_lang    = $this->context->language->id;
-        $employees  = Employee::getEmployees(true);
-        $stores     = Store::getStores($id_lang);
+        $id_lang = $this->context->language->id;
+        $employees = Employee::getEmployees(true);
+        $stores = Store::getStores($id_lang);
 
         // Récupération de la liste des magasins/employee dans la bdd
         $sql = new DbQuery();
         $sql->select('*')->from('ezmultistore_employees_stores');
         $employees_stores = $this->_generateEmployeesStoresList(Db::getInstance()->executeS($sql));
 
+        // Récupération de information supplémentaire des magasins
+        $sql = new DbQuery();
+        $sql->select('*')->from('ezmultistore_store_info');
+        $query_list = Db::getInstance()->executeS($sql);
+
+        $stores_info_list = [];
+        foreach ($query_list as $row) {
+            $stores_info_list[$row['store_id']] = $row['information'];
+        }
 
 
         $js = [
@@ -340,32 +342,56 @@ class EzMultiStore extends Module
         $this->context->controller->addJS($js);
 
 
-        if(Tools::isSubmit('submitAuthorization')) {
+        if (Tools::isSubmit('submitAuthorization')) {
 
             // Stockages de la liste des employees/magasin dans la bdd
             foreach ($employees as $employee) {
-                $values = Tools::getValue('EMPLOYEE_'.$employee['id_employee'].'_STORES');
+                $values = Tools::getValue('EMPLOYEE_' . $employee['id_employee'] . '_STORES');
+
                 $sql = sprintf("REPLACE INTO %s(`employee_id`,`store_id_array`) VALUES(%s,'%s')",
-                    _DB_PREFIX_.'ezmultistore_employees_stores', $employee['id_employee'], json_encode($values));
+                    _DB_PREFIX_ . 'ezmultistore_employees_stores',
+                    $employee['id_employee'],
+                    json_encode($values));
+
                 Db::getInstance()->execute($sql);
             }
 
-            header('Location: '.$_SERVER['REQUEST_URI']);
+            header('Location: ' . $_SERVER['REQUEST_URI']);
 
         }
 
+        if (Tools::isSubmit('submitRegistration')) {
+
+            foreach ($stores as $store) {
+
+                $store_info = Tools::getValue('INFO_STORE_' . $store['id_store']);
+
+                $sql = sprintf("REPLACE INTO %s(`store_id`,`information`) VALUES(%s,'%s') ",
+                    _DB_PREFIX_ . 'ezmultistore_store_info',
+                    $store['id_store'],
+                    Tools::htmlentitiesUTF8($store_info));
+
+                Db::getInstance()->execute($sql);
+            }
+
+            header('Location: ' . $_SERVER['REQUEST_URI']);
+        }
+
         $this->context->smarty->assign([
-            'module_version'    => 'V'.$this->version,
-            'employees'         => $employees,
-            'employees_stores'  => $employees_stores,
-            'stores'            => $stores,
+            'module_version' => 'V' . $this->version,
+            'stores_link' => $this->context->link->getAdminLink('AdminStores'),
+            'employees' => $employees,
+            'employees_stores' => '{token}',
+            'stores_info_list' => $stores_info_list,
+            'stores' => $stores,
         ]);
 
         return $this->display(__FILE__, 'views/templates/admin/configure.tpl');
 
     }
 
-    private function _generateEmployeesStoresList($query_list) {
+    private function _generateEmployeesStoresList($query_list)
+    {
         $result = [];
         foreach ($query_list as $row) {
             $stores_list = json_decode($row['store_id_array']);

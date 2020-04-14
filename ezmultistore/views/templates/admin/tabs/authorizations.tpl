@@ -39,7 +39,7 @@
     {* Footer avec les actions *}
     <div class="panel-footer">
         <div class="btn-group pull-right">
-            <button name="submitAuthorization" id="submitAuthorization_button" type="submit" class="btn btn-default">
+            <button name="submitAuthorization" id="submitAuthorization" type="submit" class="btn btn-default">
                 <i class="process-icon-save"></i>
                 {l s='Save' mod='ezmultistore'}
             </button>

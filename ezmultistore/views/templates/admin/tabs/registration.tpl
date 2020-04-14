@@ -18,9 +18,9 @@
             <div class="form-group row">
                 <label for="REGISTRATIONS_STORE_{$store['id']}" class="col-sm-2 col-form-label">{$store['name']}<br><span style="font-weight: normal">{$store['postcode']} {$store['city']}</span></label>
                 <div class="col-sm-10">
-                    <textarea class="form-control" id="REGISTRATIONS_STORE_{$store['id']}" rows="3"
+                    <textarea class="form-control" name="INFO_STORE_{$store['id']}" id="infoStore{$store['id']}" rows="3"
                               {if $key eq 0}placeholder="{l s='VAT Number' mod='ezmultistore'}: FR 123456789&#10;{l s='SIRET Number' mod='ezmultistore'}: 362 521 879 00034"{/if}
-                    ></textarea>
+                    >{if isset($stores_info_list[$store['id']])}{$stores_info_list[$store['id']]}{/if}</textarea>
                 </div>
             </div>
             {if $key+1 < (count($employees))}
@@ -32,10 +32,15 @@
 
     <div class="clearfix"></div>
 
+
     {* Footer avec les actions *}
     <div class="panel-footer">
         <div class="btn-group pull-right">
-            <button name="submitRegistration" id="submitRegistration_button" type="submit" class="btn btn-default">
+            <a href="{$stores_link}" class="btn btn-default">
+                <i class="process-icon-edit"></i>
+                {l s='Add/Modify Stores' mod='ezmultistore'}
+            </a>
+            <button name="submitRegistration" id="submitRegistration" type="submit" class="btn btn-default">
                 <i class="process-icon-save"></i>
                 {l s='Save' mod='ezmultistore'}
             </button>
