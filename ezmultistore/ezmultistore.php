@@ -37,7 +37,6 @@ class EzMultiStore extends Module
             || !$this->registerHook('displayHeader')
             || !$this->registerHook('displayOrderConfirmation')
             || !$this->registerHook('displayAdminOrder')
-            || !$this->registerHook('actionPDFInvoiceRender')
             || !$this->_installSql()
         ) return false;
 
@@ -283,33 +282,35 @@ class EzMultiStore extends Module
     public function hookDisplayAdminOrder($params)
     {
         $id_lang = $this->context->language->id;
-
         $order = new Order($params['id_order']);
 
         $sql = new DbQuery();
         $sql->select('store_id')->from('ezmultistore_order')->where('order_id = ' . $order->id);
         $store_id = Db::getInstance()->getValue($sql);
 
-        $store = new Store($store_id);
-        $imageRetriever = new \PrestaShop\PrestaShop\Adapter\Image\ImageRetriever($this->context->link);
-        $store_image = $imageRetriever->getImage(new Store($store_id), $store_id);
-        $store->hours[$id_lang] = json_decode($store->hours[$id_lang]);
+        if ($store_id) {
 
-        $sql = new DbQuery();
-        $sql->select('information')->from('ezmultistore_store_info')->where('store_id = ' . $store->id);
-        $store_info = Db::getInstance()->getValue($sql);
+            $store = new Store($store_id);
+            $imageRetriever = new \PrestaShop\PrestaShop\Adapter\Image\ImageRetriever($this->context->link);
+            $store_image = $imageRetriever->getImage(new Store($store_id), $store_id);
+            $store->hours[$id_lang] = json_decode($store->hours[$id_lang]);
+
+            $sql = new DbQuery();
+            $sql->select('information')->from('ezmultistore_store_info')->where('store_id = ' . $store->id);
+            $store_info = Db::getInstance()->getValue($sql);
 
 
-        $this->context->smarty->assign([
-            'panel_title' => $this->name . ' V' . $this->version,
-            'store_image' => $store_image,
-            'store' => $store,
-            'store_info' => Tools::htmlentitiesDecodeUTF8($store_info),
-            'state' => new State($store->id_state),
-            'country' => new Country($store->id_country),
-            'id_lang' => $id_lang,
-        ]);
-        return $this->display(__FILE__, 'displayAdminOrder2.tpl');
+            $this->context->smarty->assign([
+                'panel_title' => $this->name . ' V' . $this->version,
+                'store_image' => $store_image,
+                'store' => $store,
+                'store_info' => Tools::htmlentitiesDecodeUTF8($store_info),
+                'state' => new State($store->id_state),
+                'country' => new Country($store->id_country),
+                'id_lang' => $id_lang,
+            ]);
+            return $this->display(__FILE__, 'displayAdminOrder2.tpl');
+        }
     }
 
 
@@ -322,7 +323,7 @@ class EzMultiStore extends Module
         // Récupération de la liste des magasins/employee dans la bdd
         $sql = new DbQuery();
         $sql->select('*')->from('ezmultistore_employees_stores');
-        $employees_stores = $this->_generateEmployeesStoresList(Db::getInstance()->executeS($sql));
+        $employees_stores = EzMultiStore::generateEmployeesStoresList(Db::getInstance()->executeS($sql));
 
         // Récupération de information supplémentaire des magasins
         $sql = new DbQuery();
@@ -374,6 +375,7 @@ class EzMultiStore extends Module
                 Db::getInstance()->execute($sql);
             }
 
+
             header('Location: ' . $_SERVER['REQUEST_URI']);
         }
 
@@ -381,7 +383,7 @@ class EzMultiStore extends Module
             'module_version' => 'V' . $this->version,
             'stores_link' => $this->context->link->getAdminLink('AdminStores'),
             'employees' => $employees,
-            'employees_stores' => '{token}',
+            'employees_stores' => $employees_stores,
             'stores_info_list' => $stores_info_list,
             'stores' => $stores,
         ]);
@@ -390,7 +392,7 @@ class EzMultiStore extends Module
 
     }
 
-    private function _generateEmployeesStoresList($query_list)
+    public static function generateEmployeesStoresList($query_list)
     {
         $result = [];
         foreach ($query_list as $row) {
