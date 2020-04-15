@@ -14,8 +14,6 @@
     </div>
     <button id="cmd">{l s='Generate PDF' mod='ezmultistore'}</button>
 </body>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js"></script>
 
 {literal}
     <script type="text/javascript">

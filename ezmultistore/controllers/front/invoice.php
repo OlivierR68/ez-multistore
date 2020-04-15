@@ -8,6 +8,8 @@ class EzmultistoreInvoiceModuleFrontController extends ModuleFrontController
     {
         parent::setMedia();
 
+
+        // SA MARCHE PAS!
         $this->context->controller->registerJavascript(
             'jspdf',
             'https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js',

@@ -57,10 +57,10 @@
         </div>
 
         <div class="panel-footer">
-            <div class="btn-group pull-left">
-                <a href="{$pdf_link}" class="btn btn-default">
-                    <i class="process-icon-preview"></i>
-                    {l s='Save' mod='ezmultistore'}
+            <div class="btn-group pull-right">
+                <a target="_blank" href="{$pdf_link}" class="btn btn-default">
+                    <i class="process-icon-download"></i>
+                    {l s='Download invoice' mod='ezmultistore'}
                 </a>
             </div>
         </div>
