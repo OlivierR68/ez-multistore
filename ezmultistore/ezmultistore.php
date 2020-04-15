@@ -304,6 +304,7 @@ class EzMultiStore extends Module
                 'panel_title' => $this->name . ' V' . $this->version,
                 'store_image' => $store_image,
                 'store' => $store,
+                'pdf_link' => $link = $this->context->link->getModuleLink('ezmultistore','invoice',['id_order'=>$order->id]),
                 'store_info' => Tools::htmlentitiesDecodeUTF8($store_info),
                 'state' => new State($store->id_state),
                 'country' => new Country($store->id_country),
@@ -316,6 +317,8 @@ class EzMultiStore extends Module
 
     public function getContent()
     {
+
+
         $id_lang = $this->context->language->id;
         $employees = Employee::getEmployees(true);
         $stores = Store::getStores($id_lang);
@@ -407,6 +410,7 @@ class EzMultiStore extends Module
 
         return $result;
     }
+
 
 
 }

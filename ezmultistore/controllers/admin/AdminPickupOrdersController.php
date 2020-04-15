@@ -162,7 +162,4 @@ class AdminPickupOrdersController extends ModuleAdminController
     }
 
 
-
-
-
 }
